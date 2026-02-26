@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../config/email_config.dart';
 import '../../providers/admin_providers.dart';
+import '../../providers/email_providers.dart';
 import '../../services/admin_service.dart';
 import 'admin_widgets.dart';
 
@@ -20,6 +22,7 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
   late DateTime _to;
   String? _csvData;
   bool _isGenerating = false;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -68,7 +71,41 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
     );
   }
 
-  Future<void> _emailReport() async {
+  /// Primary send action.
+  ///
+  /// When SendGrid is configured ([EmailConfig.isConfigured]) the report is
+  /// sent directly via the API and a snackbar confirms the outcome.
+  /// Falls back to opening the device mail app when the API is not yet set up.
+  Future<void> _sendReport() async {
+    if (_csvData == null) return;
+    setState(() => _isSending = true);
+
+    if (EmailConfig.isConfigured) {
+      final sent = await ref.read(emailServiceProvider).sendReport(
+            from: _from,
+            to: _to,
+            csv: _csvData!,
+          );
+      if (mounted) {
+        setState(() => _isSending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              sent ? 'Report sent successfully.' : 'Send failed — check logs.',
+            ),
+            backgroundColor: sent ? null : Colors.red.shade700,
+          ),
+        );
+      }
+    } else {
+      // SendGrid not configured — open device mail app with CSV in body.
+      if (mounted) setState(() => _isSending = false);
+      await _openMailApp();
+    }
+  }
+
+  /// Fallback: opens the device mail app with the CSV pre-filled in the body.
+  Future<void> _openMailApp() async {
     if (_csvData == null) return;
     final subject =
         'Wellness on Wellington — Attendance ${adminFmtDate(_from)} to ${adminFmtDate(_to)}';
@@ -156,13 +193,24 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
                 ),
                 const SizedBox(width: 12),
                 OutlinedButton.icon(
-                  icon: const Icon(Icons.email_outlined, size: 16),
+                  icon: _isSending
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: adminCrimson,
+                          ),
+                        )
+                      : const Icon(Icons.send_outlined, size: 16),
                   label: Text(
-                    'Email Report',
+                    EmailConfig.isConfigured
+                        ? 'Send Report'
+                        : 'Email Report',
                     style:
                         GoogleFonts.nunito(fontWeight: FontWeight.w600),
                   ),
-                  onPressed: _emailReport,
+                  onPressed: _isSending ? null : _sendReport,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: adminCrimson,
                     side: const BorderSide(color: adminCrimson),

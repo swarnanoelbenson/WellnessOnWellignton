@@ -8,6 +8,7 @@ import '../models/auth_result.dart';
 import '../models/models.dart';
 import '../providers/attendance_providers.dart';
 import '../providers/auth_providers.dart';
+import '../providers/email_providers.dart';
 import 'admin/admin_panel_screen.dart';
 import '../widgets/admin_login_modal.dart';
 import '../widgets/password_entry_modal.dart';
@@ -49,6 +50,15 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> {
   Timer? _adminHoldTimer;
   bool _isHoldingLogo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start the daily email scheduler once the widget is in the tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(emailServiceProvider).startScheduler();
+    });
+  }
 
   @override
   void dispose() {

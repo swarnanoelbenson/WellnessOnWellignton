@@ -46,8 +46,11 @@ dependencies:
   # Open the device's mail app for CSV export
   url_launcher: ^6.3.0
 
-  # HTTP client — used for the SendGrid email API
-  http: ^1.2.2
+  # SMTP email client — used to send reports via Gmail
+  mailer: ^6.1.0
+
+  # Loads .env file at runtime for secrets (e.g. GMAIL_APP_PASSWORD)
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -61,3 +64,4 @@ flutter:
 
   assets:
     - wellness_on_wellington_logo.jpg
+    - .env
