@@ -8,6 +8,7 @@ import '../models/auth_result.dart';
 import '../models/models.dart';
 import '../providers/attendance_providers.dart';
 import '../providers/auth_providers.dart';
+import 'admin/admin_panel_screen.dart';
 import '../widgets/admin_login_modal.dart';
 import '../widgets/password_entry_modal.dart';
 import '../widgets/set_password_modal.dart';
@@ -77,7 +78,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     if (!mounted) return;
     setState(() => _isHoldingLogo = false);
     final authService = ref.read(authServiceProvider);
-    await showAdminLoginModal(
+    final loggedIn = await showAdminLoginModal(
       context: context,
       onSubmit: (username, password) async {
         final result = await authService.loginAdmin(username, password);
@@ -88,6 +89,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         return false;
       },
     );
+    if (loggedIn && mounted) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+      );
+      // Clear the session and refresh the board in case admin made changes.
+      if (mounted) {
+        ref.read(adminSessionProvider.notifier).state = null;
+        _refreshBoard();
+      }
+    }
   }
 
   // ── Clock-in flow ─────────────────────────────────────────────────────────

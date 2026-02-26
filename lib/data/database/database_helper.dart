@@ -282,6 +282,27 @@ class DatabaseHelper {
     await db.delete(tablePublicHolidays, where: 'id = ?', whereArgs: [id]);
   }
 
+  /// All records where date is between [from] and [to] (inclusive).
+  ///
+  /// Results are ordered by date descending, then clock-in time ascending —
+  /// most-recent day first so the admin log view shows the latest entries at
+  /// the top.
+  Future<List<AttendanceRecord>> getAttendanceForDateRange(
+    DateTime from,
+    DateTime to,
+  ) async {
+    final db = await database;
+    final fromKey = _dateKey(from);
+    final toKey = _dateKey(to);
+    final rows = await db.query(
+      tableAttendanceRecords,
+      where: 'date >= ? AND date <= ?',
+      whereArgs: [fromKey, toKey],
+      orderBy: 'date DESC, clock_in_time ASC',
+    );
+    return rows.map(AttendanceRecord.fromMap).toList();
+  }
+
   // ── Utility ──────────────────────────────────────────────────────────────
 
   /// YYYY-MM-DD date key — shared format between SQLite and Firestore.

@@ -43,6 +43,9 @@ dependencies:
   # Shared preferences for minor flags
   shared_preferences: ^2.5.2
 
+  # Open the device's mail app for CSV export
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
