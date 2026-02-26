@@ -52,3 +52,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - wellness_on_wellington_logo.jpg

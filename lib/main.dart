@@ -1,7 +1,12 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
+
+import 'data/database/database_helper.dart';
+import 'models/models.dart';
+import 'screens/splash_screen.dart';
+import 'utils/password_utils.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,15 +20,16 @@ Future<void> main() async {
   // Firebase initialisation.
   // Requires google-services.json (Android) and GoogleService-Info.plist (iOS).
   // Run `flutterfire configure` to generate lib/firebase_options.dart, then
-  // replace the try/catch below with:
+  // replace the try/catch with:
   //   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    // Firebase config files not yet present — the app runs in offline/SQLite
-    // mode. Firestore sync will be unavailable until Firebase is configured.
     debugPrint('[Firebase] Not initialised — offline mode active. Error: $e');
   }
+
+  // Seed dummy employees on first launch (no-op when DB already has data).
+  await _seedDummyEmployees();
 
   runApp(
     const ProviderScope(
@@ -32,12 +38,41 @@ Future<void> main() async {
   );
 }
 
+/// Seeds 8 dummy employees with the default password on first launch.
+///
+/// Safe to call on every start — exits immediately if employees already exist.
+/// The default password hash is computed once and reused for all employees.
+Future<void> _seedDummyEmployees() async {
+  final db = DatabaseHelper.instance;
+  if ((await db.getAllEmployees()).isNotEmpty) return;
+
+  // Compute the default-password hash once (bcrypt is intentionally slow).
+  final hash = PasswordUtils.hashPassword(PasswordUtils.defaultPassword);
+
+  const names = [
+    'Alice Johnson',
+    'Bob Smith',
+    'Carol Williams',
+    'David Brown',
+    'Eve Davis',
+    'Frank Miller',
+    'Grace Lee',
+    'Henry Wilson',
+  ];
+
+  for (final name in names) {
+    await db.insertEmployee(Employee.create(name: name, defaultPasswordHash: hash));
+  }
+
+  debugPrint('[Seed] Inserted ${names.length} dummy employees.');
+}
+
 class WellnessOnWellingtonApp extends StatelessWidget {
   const WellnessOnWellingtonApp({super.key});
 
-  // Brand colours
-  static const Color crimson = Color(0xFF8B0000);   // deep red
-  static const Color charcoal = Color(0xFF2C2C2C);  // dark charcoal grey
+  // Brand colours — referenced by sub-widgets via WellnessOnWellingtonApp.crimson
+  static const Color crimson = Color(0xFF8B0000);
+  static const Color charcoal = Color(0xFF2C2C2C);
 
   @override
   Widget build(BuildContext context) {
@@ -55,45 +90,7 @@ class WellnessOnWellingtonApp extends StatelessWidget {
           surface: const Color(0xFFFAFAFA),
         ),
       ),
-      // Phase 1 placeholder — replaced in Phase 2 with the real home screen.
-      home: const _Phase1Placeholder(),
-    );
-  }
-}
-
-/// Temporary scaffold shown during Phase 1.
-/// Confirms that the app boots, Firebase initialises, and Riverpod is active.
-class _Phase1Placeholder extends StatelessWidget {
-  const _Phase1Placeholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: WellnessOnWellingtonApp.crimson,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.favorite, color: Colors.white, size: 64),
-            const SizedBox(height: 24),
-            Text(
-              'Wellness on Wellington',
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Phase 1 — Data Models ✓',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white70,
-                  ),
-            ),
-          ],
-        ),
-      ),
+      home: const SplashScreen(),
     );
   }
 }
