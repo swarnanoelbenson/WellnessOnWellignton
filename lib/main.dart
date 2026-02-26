@@ -28,8 +28,9 @@ Future<void> main() async {
     debugPrint('[Firebase] Not initialised — offline mode active. Error: $e');
   }
 
-  // Seed dummy employees on first launch (no-op when DB already has data).
+  // Seed dummy employees and admin accounts on first launch.
   await _seedDummyEmployees();
+  await _seedAdminUsers();
 
   runApp(
     const ProviderScope(
@@ -65,6 +66,45 @@ Future<void> _seedDummyEmployees() async {
   }
 
   debugPrint('[Seed] Inserted ${names.length} dummy employees.');
+}
+
+/// Seeds 2 admin accounts on first launch (no-op when accounts already exist).
+///
+/// Credentials are printed to the debug console on every launch so they are
+/// easy to find during development.  Change these before going to production
+/// by deleting the app data (or the SQLite DB file) and restarting with the
+/// desired credentials hardcoded below.
+Future<void> _seedAdminUsers() async {
+  final db = DatabaseHelper.instance;
+
+  // Always log current admin state so the developer can verify.
+  final existing = await db.getAllAdmins();
+  if (existing.isNotEmpty) {
+    debugPrint('[Admin] ${existing.length} admin account(s) already in DB:');
+    for (final a in existing) {
+      debugPrint('[Admin]   username: "${a.username}"');
+    }
+    return;
+  }
+
+  // Seed the two default admin accounts.
+  const accounts = [
+    (username: 'admin',   password: 'admin123'),
+    (username: 'manager', password: 'manager123'),
+  ];
+
+  for (final a in accounts) {
+    final hash = PasswordUtils.hashPassword(a.password);
+    await db.insertAdminUser(
+      AdminUser.create(username: a.username, passwordHash: hash),
+    );
+  }
+
+  debugPrint('[Seed] Inserted ${accounts.length} admin accounts.');
+  debugPrint('[Seed] ─────────────────────────────────────────');
+  debugPrint('[Seed]   username : "admin"     password : "admin123"');
+  debugPrint('[Seed]   username : "manager"   password : "manager123"');
+  debugPrint('[Seed] ─────────────────────────────────────────');
 }
 
 class WellnessOnWellingtonApp extends StatelessWidget {

@@ -46,6 +46,9 @@ dependencies:
   # Open the device's mail app for CSV export
   url_launcher: ^6.3.0
 
+  # HTTP client — used for the SendGrid email API
+  http: ^1.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
