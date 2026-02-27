@@ -60,6 +60,37 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   riverpod_generator: ^2.6.2
   build_runner: ^2.4.14
+  # Windows MSIX installer packaging
+  msix: ^3.16.8
+
+# ── Windows MSIX packaging ────────────────────────────────────────────────────
+# Run on a Windows machine: dart run msix:create
+# This builds the Windows release and produces an MSIX installer.
+#
+# First-time setup on the target Windows PC:
+#   1. Open Settings → System → For developers → enable "Developer Mode"
+#      (or install the generated certificate via the MSIX right-click menu)
+#   2. Double-click the generated .msix file to install.
+msix_config:
+  display_name: Wellness on Wellington
+  publisher_display_name: Wellness on Wellington
+  # Reverse-domain identity — must be unique per machine; not published to Store.
+  identity_name: com.wellnessonwellington.attendance
+  # Publisher Distinguished Name — must match the self-signed certificate subject.
+  publisher: CN=Wellness on Wellington
+  # Four-part version: major.minor.patch.build
+  msix_version: 1.0.0.0
+  # App icon — the ICO already present in the Windows runner resources.
+  logo_path: windows\runner\resources\app_icon.ico
+  # runFullTrust grants file-system access (SQLite DB) and unrestricted networking
+  # (Gmail SMTP, Firestore).  Required for desktop line-of-business apps.
+  capabilities: runFullTrust
+  # Self-sign with a generated certificate so the MSIX can be sideloaded.
+  sign_msix: true
+  # Do NOT auto-install the certificate — clinic IT installs it once manually.
+  install_certificate: false
+  # Targeting internal sideload, not the Microsoft Store.
+  store: false
 
 flutter:
   uses-material-design: true

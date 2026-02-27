@@ -355,7 +355,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          // Heart logo — hold 3 s to reveal admin login.
+          // Clinic logo — hold 3 s to reveal admin login.
           GestureDetector(
             onTapDown: _onLogoTapDown,
             onTapUp: _onLogoTapUp,
@@ -363,21 +363,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             child: AnimatedOpacity(
               opacity: _isHoldingLogo ? 0.35 : 1.0,
               duration: const Duration(milliseconds: 150),
-              child: const Icon(
-                Icons.favorite_rounded,
-                color: Colors.white,
-                size: 30,
+              child: Image.asset(
+                'wellness_on_wellington_logo.jpg',
+                height: 44,
+                fit: BoxFit.contain,
               ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            'Wellness on Wellington',
-            style: GoogleFonts.nunito(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.2,
             ),
           ),
           const Spacer(),

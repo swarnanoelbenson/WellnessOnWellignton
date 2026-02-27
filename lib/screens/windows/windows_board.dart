@@ -38,17 +38,11 @@ class DesktopTopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Row(
         children: [
-          // Left: logo + title
-          const Icon(Icons.favorite_rounded, color: Colors.white, size: 26),
-          const SizedBox(width: 14),
-          Text(
-            'Wellness on Wellington',
-            style: GoogleFonts.nunito(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.2,
-            ),
+          // Left: clinic logo
+          Image.asset(
+            'wellness_on_wellington_logo.jpg',
+            height: 44,
+            fit: BoxFit.contain,
           ),
 
           // Centre: live date/time
