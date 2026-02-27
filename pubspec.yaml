@@ -17,8 +17,10 @@ dependencies:
   flutter_riverpod: ^2.6.1
   riverpod_annotation: ^2.6.1
 
-  # Local database
+  # Local database (sqflite for Android/iOS; FFI wrapper for Windows/desktop)
   sqflite: ^2.4.1
+  sqflite_common_ffi: ^2.3.4
+  sqlite3_flutter_libs: ^0.5.24
   path: ^1.9.1
 
   # Firebase

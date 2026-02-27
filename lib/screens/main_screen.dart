@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,7 @@ import 'admin/admin_panel_screen.dart';
 import '../widgets/admin_login_modal.dart';
 import '../widgets/password_entry_modal.dart';
 import '../widgets/set_password_modal.dart';
+import 'windows/windows_board.dart';
 
 // ── Shared constants ──────────────────────────────────────────────────────────
 
@@ -100,9 +102,29 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       },
     );
     if (loggedIn && mounted) {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
-      );
+      if (Platform.isWindows) {
+        // On Windows the admin panel slides in as a full-screen modal overlay
+        // so the attendance board stays in the widget tree behind it.
+        // AdminPanelScreen._logOut calls Navigator.pop() which closes the
+        // dialog route correctly, just as it does for the push route below.
+        await showGeneralDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          barrierLabel: '',
+          barrierColor: Colors.black45,
+          transitionDuration: const Duration(milliseconds: 180),
+          transitionBuilder: (_, animation, _, child) => FadeTransition(
+            opacity:
+                CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            child: child,
+          ),
+          pageBuilder: (_, _, _) => const AdminPanelScreen(),
+        );
+      } else {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+        );
+      }
       // Clear the session and refresh the board in case admin made changes.
       if (mounted) {
         ref.read(adminSessionProvider.notifier).state = null;
@@ -193,6 +215,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   Widget build(BuildContext context) {
     final boardAsync = ref.watch(attendanceBoardProvider);
 
+    // Windows gets the desktop layout; Android / iOS keep the tablet layout.
+    if (Platform.isWindows) {
+      return _buildWindowsScaffold(boardAsync);
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF0F0F0),
       body: Column(
@@ -215,6 +242,107 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Windows desktop layout ────────────────────────────────────────────────
+
+  Scaffold _buildWindowsScaffold(AsyncValue<AttendanceBoardState> boardAsync) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: Column(
+        children: [
+          // Persistent top nav bar with logo, clock, and Admin button.
+          DesktopTopBar(onAdminTap: _openAdminAccess),
+          Expanded(
+            child: boardAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: _crimson),
+              ),
+              error: (e, _) => Center(
+                child: Text(
+                  'Could not load data.\n$e',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(color: Colors.red.shade700),
+                ),
+              ),
+              data: _buildDesktopBoard,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Three-column desktop attendance board (Not Clocked In | Clocked In |
+  /// Completed), each with a count summary header and a search/filter bar.
+  Widget _buildDesktopBoard(AttendanceBoardState board) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Not Clocked In ──────────────────────────────────────────────
+        Expanded(
+          child: DesktopBoardColumn(
+            title: 'Not Clocked In',
+            accentColor: _charcoal,
+            emptyMessage: 'Everyone is accounted for!',
+            namedCards: [
+              for (final emp in board.notClockedIn)
+                (
+                  emp.name,
+                  DesktopEmployeeCard(
+                    key: ValueKey(emp.id),
+                    name: emp.name,
+                    onTap: () => _onEmployeeTap(emp),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        Container(width: 1, color: Colors.grey.shade300),
+
+        // ── Clocked In ──────────────────────────────────────────────────
+        Expanded(
+          child: DesktopBoardColumn(
+            title: 'Clocked In',
+            accentColor: _green,
+            emptyMessage: 'No one is clocked in yet.',
+            namedCards: [
+              for (final rec in board.clockedIn)
+                (
+                  rec.employeeName,
+                  DesktopClockedInCard(
+                    key: ValueKey(rec.id),
+                    record: rec,
+                    onTap: () => _onClockedInCardTap(rec),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        Container(width: 1, color: Colors.grey.shade300),
+
+        // ── Completed ────────────────────────────────────────────────────
+        Expanded(
+          child: DesktopBoardColumn(
+            title: 'Completed',
+            accentColor: _charcoal.withValues(alpha: 0.45),
+            emptyMessage: 'No completed shifts yet.',
+            namedCards: [
+              for (final rec in board.completed)
+                (
+                  rec.employeeName,
+                  DesktopCompletedCard(
+                    key: ValueKey(rec.id),
+                    record: rec,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

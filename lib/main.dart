@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'data/database/database_helper.dart';
 import 'models/models.dart';
@@ -12,7 +15,17 @@ import 'utils/password_utils.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load secrets from the .env asset (e.g. SENDGRID_API_KEY).
+  // On Windows (and other desktop platforms) sqflite does not have a native
+  // plugin implementation.  sqflite_common_ffi bridges SQLite via Dart FFI and
+  // must be initialised before the first database access.
+  // On Android / iOS the standard sqflite plugin takes over — this block is
+  // never reached on those platforms.
+  if (!Platform.isAndroid && !Platform.isIOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
+  // Load secrets from the .env asset (e.g. GMAIL_APP_PASSWORD).
   // The file is bundled as a Flutter asset but excluded from version control
   // via .gitignore.  mergeWith({}) silences the error if .env is absent so
   // tests and CI can still run without the file.
