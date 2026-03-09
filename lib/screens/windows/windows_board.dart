@@ -9,14 +9,11 @@ const Color _crimson = Color(0xFF8B0000);
 const Color _charcoal = Color(0xFF2C2C2C);
 const Color _green = Color(0xFF2E7D32);
 
-// ── Time formatting helper ────────────────────────────────────────────────────
+// ── Time formatting helpers ───────────────────────────────────────────────────
 
-String _fmtTime(DateTime dt) {
-  final h = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
-  final period = dt.hour >= 12 ? 'PM' : 'AM';
-  final mm = dt.minute.toString().padLeft(2, '0');
-  return '$h:$mm $period';
-}
+/// 24-hour HH:mm format used on attendance board cards.
+String _fmt24(DateTime dt) =>
+    '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
 // ── Desktop top navigation bar ────────────────────────────────────────────────
 
@@ -40,7 +37,7 @@ class DesktopTopBar extends StatelessWidget {
         children: [
           // Left: clinic logo
           Image.asset(
-            'wellness_on_wellington_logo.jpg',
+            'assets/main_page_logo.jpg',
             height: 44,
             fit: BoxFit.contain,
           ),
@@ -83,49 +80,34 @@ class _DesktopLiveClock extends StatelessWidget {
   const _DesktopLiveClock();
 
   static const _days = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-    'Friday', 'Saturday', 'Sunday',
+    'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY',
+    'FRIDAY', 'SATURDAY', 'SUNDAY',
   ];
   static const _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+    'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER',
   ];
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DateTime>(
       stream: Stream.periodic(
-        const Duration(seconds: 1),
+        const Duration(minutes: 1),
         (_) => DateTime.now(),
       ),
       builder: (_, snap) {
         final now = snap.data ?? DateTime.now();
-        final h =
-            now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
-        final period = now.hour >= 12 ? 'PM' : 'AM';
-        final time =
-            '$h:${now.minute.toString().padLeft(2, '0')} $period';
-        final date =
-            '${_days[now.weekday - 1]}  ${now.day} ${_months[now.month - 1]}  ${now.year}';
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              time,
-              style: GoogleFonts.nunito(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            Text(
-              date,
-              style: GoogleFonts.nunito(
-                color: Colors.white.withValues(alpha: 0.80),
-                fontSize: 13,
-              ),
-            ),
-          ],
+        final hh = now.hour.toString().padLeft(2, '0');
+        final mm = now.minute.toString().padLeft(2, '0');
+        final label =
+            '${_days[now.weekday - 1]}, ${now.day} ${_months[now.month - 1]} ${now.year}   $hh:$mm';
+        return Text(
+          label,
+          style: GoogleFonts.nunito(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         );
       },
     );
@@ -310,10 +292,14 @@ class DesktopEmployeeCard extends StatelessWidget {
     super.key,
     required this.name,
     required this.onTap,
+    this.lastClockOut,
   });
 
   final String name;
   final VoidCallback onTap;
+
+  /// Most recent clock-out time today, shown as "OUT: HH:mm" when non-null.
+  final DateTime? lastClockOut;
 
   @override
   Widget build(BuildContext context) {
@@ -352,11 +338,21 @@ class DesktopEmployeeCard extends StatelessWidget {
                   name,
                   style: GoogleFonts.nunito(
                     fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: _charcoal,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF212121),
                   ),
                 ),
               ),
+              if (lastClockOut != null) ...[
+                Text(
+                  'OUT: ${_fmt24(lastClockOut!)}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
               // Clock-in action
               _ActionChip(
                 label: 'Clock In',
@@ -420,15 +416,15 @@ class DesktopClockedInCard extends StatelessWidget {
                       record.employeeName,
                       style: GoogleFonts.nunito(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: _charcoal,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF212121),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'In: ${_fmtTime(record.clockInTime)}',
+                      'IN: ${_fmt24(record.clockInTime)}',
                       style: GoogleFonts.nunito(
-                        fontSize: 13,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: _green,
                       ),
@@ -446,88 +442,6 @@ class DesktopClockedInCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Completed-shift card.
-///
-/// Horizontal layout: avatar | name + "HH:MM → HH:MM" | ··· | [Xh badge]
-class DesktopCompletedCard extends StatelessWidget {
-  const DesktopCompletedCard({super.key, required this.record});
-
-  final AttendanceRecord record;
-
-  @override
-  Widget build(BuildContext context) {
-    final hours = record.totalHours;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 6),
-      elevation: 0,
-      color: Colors.white.withValues(alpha: 0.8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        child: Row(
-          children: [
-            // Avatar
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.grey.shade100,
-              child:
-                  const Icon(Icons.done_all, size: 18, color: Colors.grey),
-            ),
-            const SizedBox(width: 16),
-            // Name + time range
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    record.employeeName,
-                    style: GoogleFonts.nunito(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: _charcoal.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_fmtTime(record.clockInTime)} → '
-                    '${_fmtTime(record.clockOutTime!)}',
-                    style: GoogleFonts.nunito(
-                      fontSize: 13,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Hours badge
-            if (hours != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${hours}h',
-                  style: GoogleFonts.nunito(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ),
-          ],
         ),
       ),
     );

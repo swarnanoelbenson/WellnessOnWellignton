@@ -24,21 +24,9 @@ const Color _green = Color(0xFF2E7D32);
 
 // ── Time / date helpers ───────────────────────────────────────────────────────
 
-String _formatTime(DateTime dt) {
-  final h = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
-  final period = dt.hour >= 12 ? 'PM' : 'AM';
-  final mm = dt.minute.toString().padLeft(2, '0');
-  return '$h:$mm $period';
-}
-
-String _formatDate(DateTime dt) {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  return '${days[dt.weekday - 1]}  ${dt.day} ${months[dt.month - 1]}';
-}
+/// 24-hour HH:mm format used on attendance board cards.
+String _fmt24(DateTime dt) =>
+    '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
@@ -294,6 +282,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     key: ValueKey(emp.id),
                     name: emp.name,
                     onTap: () => _onEmployeeTap(emp),
+                    lastClockOut: board.lastClockOutTimes[emp.id],
                   ),
                 ),
             ],
@@ -322,26 +311,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ),
 
-        Container(width: 1, color: Colors.grey.shade300),
-
-        // ── Completed ────────────────────────────────────────────────────
-        Expanded(
-          child: DesktopBoardColumn(
-            title: 'Completed',
-            accentColor: _charcoal.withValues(alpha: 0.45),
-            emptyMessage: 'No completed shifts yet.',
-            namedCards: [
-              for (final rec in board.completed)
-                (
-                  rec.employeeName,
-                  DesktopCompletedCard(
-                    key: ValueKey(rec.id),
-                    record: rec,
-                  ),
-                ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -364,7 +333,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               opacity: _isHoldingLogo ? 0.35 : 1.0,
               duration: const Duration(milliseconds: 150),
               child: Image.asset(
-                'wellness_on_wellington_logo.jpg',
+                'assets/main_page_logo.jpg',
                 height: 44,
                 fit: BoxFit.contain,
               ),
@@ -395,6 +364,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 _EmployeeCard(
                   name: emp.name,
                   onTap: () => _onEmployeeTap(emp),
+                  lastClockOut: board.lastClockOutTimes[emp.id],
                 ),
             ],
           ),
@@ -403,45 +373,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         // Thin vertical divider
         Container(width: 1, color: Colors.grey.shade300),
 
-        // ── Right: Clocked In + Completed (stacked) ───────────────────────
+        // ── Right: Clocked In ─────────────────────────────────────────────
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: _BoardColumn(
+            title: 'Clocked In',
+            count: board.clockedIn.length,
+            accentColor: _green,
+            emptyMessage: 'No one is clocked in yet.',
             children: [
-              // Clocked In (takes more vertical space)
-              Expanded(
-                flex: 3,
-                child: _BoardColumn(
-                  title: 'Clocked In',
-                  count: board.clockedIn.length,
-                  accentColor: _green,
-                  emptyMessage: 'No one is clocked in yet.',
-                  children: [
-                    for (final rec in board.clockedIn)
-                      _ClockedInCard(
-                        record: rec,
-                        onTap: () => _onClockedInCardTap(rec),
-                      ),
-                  ],
+              for (final rec in board.clockedIn)
+                _ClockedInCard(
+                  record: rec,
+                  onTap: () => _onClockedInCardTap(rec),
                 ),
-              ),
-
-              Container(height: 1, color: Colors.grey.shade300),
-
-              // Completed
-              Expanded(
-                flex: 2,
-                child: _BoardColumn(
-                  title: 'Completed',
-                  count: board.completed.length,
-                  accentColor: _charcoal.withValues(alpha: 0.45),
-                  emptyMessage: 'No completed shifts yet.',
-                  children: [
-                    for (final rec in board.completed)
-                      _CompletedCard(record: rec),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -455,35 +399,35 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 class _LiveClock extends StatelessWidget {
   const _LiveClock();
 
+  static const _days = [
+    'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY',
+    'FRIDAY', 'SATURDAY', 'SUNDAY',
+  ];
+  static const _months = [
+    'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+    'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DateTime>(
       stream: Stream.periodic(
-        const Duration(seconds: 1),
+        const Duration(minutes: 1),
         (_) => DateTime.now(),
       ),
       builder: (context, snapshot) {
         final now = snapshot.data ?? DateTime.now();
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              _formatTime(now),
-              style: GoogleFonts.nunito(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              _formatDate(now),
-              style: GoogleFonts.nunito(
-                color: Colors.white.withValues(alpha: 0.75),
-                fontSize: 12,
-              ),
-            ),
-          ],
+        final hh = now.hour.toString().padLeft(2, '0');
+        final mm = now.minute.toString().padLeft(2, '0');
+        final label =
+            '${_days[now.weekday - 1]}, ${now.day} ${_months[now.month - 1]} ${now.year}   $hh:$mm';
+        return Text(
+          label,
+          style: GoogleFonts.nunito(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         );
       },
     );
@@ -575,10 +519,17 @@ class _BoardColumn extends StatelessWidget {
 // ── Employee card — not clocked in ────────────────────────────────────────────
 
 class _EmployeeCard extends StatelessWidget {
-  const _EmployeeCard({required this.name, required this.onTap});
+  const _EmployeeCard({
+    required this.name,
+    required this.onTap,
+    this.lastClockOut,
+  });
 
   final String name;
   final VoidCallback onTap;
+
+  /// Most recent clock-out time today, shown as "OUT: HH:mm" when non-null.
+  final DateTime? lastClockOut;
 
   @override
   Widget build(BuildContext context) {
@@ -613,11 +564,21 @@ class _EmployeeCard extends StatelessWidget {
                   name,
                   style: GoogleFonts.nunito(
                     fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: _charcoal,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF212121),
                   ),
                 ),
               ),
+              if (lastClockOut != null) ...[
+                Text(
+                  'OUT: ${_fmt24(lastClockOut!)}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
             ],
           ),
@@ -667,14 +628,14 @@ class _ClockedInCard extends StatelessWidget {
                       record.employeeName,
                       style: GoogleFonts.nunito(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: _charcoal,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF212121),
                       ),
                     ),
                     Text(
-                      'In since ${_formatTime(record.clockInTime)}',
+                      'IN: ${_fmt24(record.clockInTime)}',
                       style: GoogleFonts.nunito(
-                        fontSize: 12,
+                        fontSize: 16,
                         color: _green,
                         fontWeight: FontWeight.w600,
                       ),
@@ -691,77 +652,3 @@ class _ClockedInCard extends StatelessWidget {
   }
 }
 
-// ── Completed card ────────────────────────────────────────────────────────────
-
-class _CompletedCard extends StatelessWidget {
-  const _CompletedCard({required this.record});
-
-  final AttendanceRecord record;
-
-  @override
-  Widget build(BuildContext context) {
-    final hours = record.totalHours;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 0,
-      color: Colors.white.withValues(alpha: 0.7),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.grey.shade100,
-              child: const Icon(Icons.done_all, size: 18, color: Colors.grey),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    record.employeeName,
-                    style: GoogleFonts.nunito(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: _charcoal.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  Text(
-                    '${_formatTime(record.clockInTime)} → '
-                    '${_formatTime(record.clockOutTime!)}',
-                    style: GoogleFonts.nunito(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (hours != null)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${hours}h',
-                  style: GoogleFonts.nunito(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}

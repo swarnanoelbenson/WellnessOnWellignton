@@ -134,8 +134,11 @@ class AuthService {
     if (employee == null) return const ClockInWrongPassword();
 
     final today = DateTime.now();
+    // Only an open (not yet clocked-out) session blocks a new clock-in.
+    // A closed session means the employee clocked out earlier and may start
+    // another session.
     final existing =
-        await _db.getEmployeeAttendanceForDate(employeeId, today);
+        await _db.getOpenSessionForEmployee(employeeId, today);
 
     final result = buildClockInResult(
       employee: employee,
@@ -197,9 +200,10 @@ class AuthService {
     if (employee == null) return const ClockOutWrongPassword();
 
     final today = DateTime.now();
-    final record = await _db.getEmployeeAttendanceForDate(employeeId, today);
+    // Find the specific open session to clock out.
+    final record = await _db.getOpenSessionForEmployee(employeeId, today);
 
-    // Defensive guard: if the employee has no open record the UI should never
+    // Defensive guard: if the employee has no open session the UI should never
     // have offered them a clock-out tap, but we handle it gracefully.
     if (record == null) return const ClockOutWrongPassword();
 

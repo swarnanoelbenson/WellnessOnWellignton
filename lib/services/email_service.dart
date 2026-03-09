@@ -8,6 +8,7 @@ import 'package:mailer/smtp_server.dart';
 import '../config/email_config.dart';
 import '../data/database/database_helper.dart';
 import '../services/admin_service.dart';
+import '../services/board_reset_service.dart';
 
 /// Handles the daily scheduled attendance email and manual report sending.
 ///
@@ -32,9 +33,17 @@ import '../services/admin_service.dart';
 /// If [EmailConfig.isConfigured] is false the call is skipped and `false` is
 /// returned so callers can fall back to the device mail app.
 class EmailService {
-  EmailService({required DatabaseHelper db}) : _db = db;
+  EmailService({
+    required DatabaseHelper db,
+    this.onReportSent,
+  }) : _db = db;
 
   final DatabaseHelper _db;
+
+  /// Called after every successful email send (scheduled or manual).
+  /// Use this to invalidate board providers so the UI resets immediately.
+  final VoidCallback? onReportSent;
+
   Timer? _dailyTimer;
 
   // Weekday (DateTime.monday == 1 … DateTime.sunday == 7) → send hour (24 h).
@@ -110,8 +119,15 @@ class EmailService {
 
     try {
       final records = await _db.getAttendanceForDate(today);
-      final csv = AdminService.generateCsv(records);
-      final sent = await sendReport(from: today, to: today, csv: csv);
+      final employees = await _db.getAllEmployees();
+      final detailed = AdminService.generateDetailedCsv(employees, records);
+      final summary = AdminService.generateSummaryCsv(employees, records);
+      final sent = await sendReport(
+        from: today,
+        to: today,
+        detailedCsv: detailed,
+        summaryCsv: summary,
+      );
       if (!sent) {
         debugPrint('[Email] Auto-send failed (see above); will retry tomorrow.');
       }
@@ -124,18 +140,17 @@ class EmailService {
 
   // ── Manual / SMTP send ────────────────────────────────────────────────────
 
-  /// Sends [csv] to [EmailConfig.reportRecipients] via Gmail SMTP
-  /// (smtp.gmail.com, port 587, STARTTLS).
+  /// Sends two CSV attachments (detailed + summary) to
+  /// [EmailConfig.reportRecipients] via Gmail SMTP (smtp.gmail.com:587,
+  /// STARTTLS).
   ///
   /// Returns `true` on success, `false` on any failure.
-  /// Logs all outcomes via [debugPrint].
-  ///
-  /// Does nothing and returns `false` when [EmailConfig.isConfigured] is
-  /// false — the caller should fall back to the device mail app.
+  /// Does nothing and returns `false` when [EmailConfig.isConfigured] is false.
   Future<bool> sendReport({
     required DateTime from,
     required DateTime to,
-    required String csv,
+    required String detailedCsv,
+    required String summaryCsv,
   }) async {
     if (!EmailConfig.isConfigured) {
       debugPrint('[Email] Gmail credentials not configured — skipping send.');
@@ -143,25 +158,39 @@ class EmailService {
     }
 
     final subject = _buildSubject(from, to);
-    final dateTag =
-        '${from.year}-${from.month.toString().padLeft(2, '0')}-${from.day.toString().padLeft(2, '0')}';
-    final filename = from == to
-        ? 'attendance_$dateTag.csv'
-        : 'attendance_${dateTag}_to_'
-            '${to.year}-${to.month.toString().padLeft(2, '0')}-${to.day.toString().padLeft(2, '0')}'
-            '.csv';
+    final isSingleDay =
+        from.year == to.year && from.month == to.month && from.day == to.day;
+    final dateTag = isSingleDay
+        ? '${from.day.toString().padLeft(2, '0')}-'
+          '${from.month.toString().padLeft(2, '0')}-'
+          '${from.year}'
+        : '${from.day.toString().padLeft(2, '0')}-'
+          '${from.month.toString().padLeft(2, '0')}-'
+          '${from.year}_to_'
+          '${to.day.toString().padLeft(2, '0')}-'
+          '${to.month.toString().padLeft(2, '0')}-'
+          '${to.year}';
 
-    final present =
-        csv.split('\n').skip(1).where((l) => l.contains('Complete')).length;
-    final missing = csv
-        .split('\n')
-        .skip(1)
-        .where((l) => l.contains('Missing Clock-Out'))
-        .length;
-    final absent =
-        csv.split('\n').skip(1).where((l) => l.contains('Absent')).length;
+    final detailedFilename = 'wellness_attendance_detailed_$dateTag.csv';
+    final summaryFilename  = 'wellness_attendance_summary_$dateTag.csv';
+
+    // Count summary stats from the summary CSV (skip header row).
+    final summaryLines = summaryCsv.split('\n').skip(1);
+    final present = summaryLines.where((l) => l.contains('Complete')).length;
+    final missing = summaryLines.where((l) => l.contains('Missing Clock-Out')).length;
+    final absent  = summaryLines.where((l) => l.contains('Absent')).length;
 
     final bodyText = '''$subject
+
+Attachments
+───────────────────────────────────────────────
+• $detailedFilename
+  Detailed Report — for internal finance review.
+  Shows each clock-in/clock-out session with per-employee totals.
+
+• $summaryFilename
+  Summary Report — for payroll software upload.
+  One row per employee with total hours for the day.
 
 Summary
 ───────────────────────
@@ -169,13 +198,10 @@ Present (complete):     $present
 Missing clock-out:      $missing
 Absent:                 $absent
 
-The full attendance log is attached as a CSV file.
-
 ─────────────────────────────────────────────────
 Sent automatically by Wellness on Wellington
 ''';
 
-    // smtp.gmail.com:587 with STARTTLS — requires a Google App Password.
     final smtpServer = SmtpServer(
       'smtp.gmail.com',
       port: 587,
@@ -189,17 +215,22 @@ Sent automatically by Wellness on Wellington
           EmailConfig.reportRecipients.map((email) => Address(email)))
       ..subject = subject
       ..text = bodyText
-      ..attachments.add(
-        StreamAttachment(
-          Stream.fromIterable([utf8.encode(csv)]),
-          'text/csv',
-          fileName: filename,
-        ),
-      );
+      ..attachments.add(StreamAttachment(
+        Stream.fromIterable([utf8.encode(detailedCsv)]),
+        'text/csv',
+        fileName: detailedFilename,
+      ))
+      ..attachments.add(StreamAttachment(
+        Stream.fromIterable([utf8.encode(summaryCsv)]),
+        'text/csv',
+        fileName: summaryFilename,
+      ));
 
     try {
       final report = await send(message, smtpServer);
       debugPrint('[Email] Report "$subject" sent — $report');
+      await BoardResetService.markReset();
+      onReportSent?.call();
       return true;
     } on MailerException catch (e) {
       debugPrint('[Email] SMTP error: ${e.message}');
@@ -216,12 +247,14 @@ Sent automatically by Wellness on Wellington
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   static String _buildSubject(DateTime from, DateTime to) {
-    String fmt(DateTime d) =>
-        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    String dmY(DateTime d) =>
+        '${d.day.toString().padLeft(2, '0')}/'
+        '${d.month.toString().padLeft(2, '0')}/'
+        '${d.year}';
 
     final isSingleDay =
         from.year == to.year && from.month == to.month && from.day == to.day;
-    final dateRange = isSingleDay ? fmt(from) : '${fmt(from)} to ${fmt(to)}';
-    return 'Wellness on Wellington — Attendance Report $dateRange';
+    final dateRange = isSingleDay ? dmY(from) : '${dmY(from)} to ${dmY(to)}';
+    return 'Wellness on Wellington – Attendance Report $dateRange';
   }
 }

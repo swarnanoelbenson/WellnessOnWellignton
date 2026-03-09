@@ -79,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen>
                   maxHeight: 220,
                 ),
                 child: Image.asset(
-                  'wellness_on_wellington_logo.jpg',
+                  'assets/main_page_logo.jpg',
                   fit: BoxFit.contain,
                 ),
               ),

@@ -65,6 +65,8 @@ class AdminService {
 
   // ── Reports ───────────────────────────────────────────────────────────────
 
+  Future<List<Employee>> getAllEmployees() => _db.getAllEmployees();
+
   Future<List<AttendanceRecord>> getAttendanceForDateRange(
     DateTime from,
     DateTime to,
@@ -72,22 +74,113 @@ class AdminService {
     return _db.getAttendanceForDateRange(from, to);
   }
 
-  /// Converts a list of attendance records to a RFC-4180 CSV string.
+  /// Detailed CSV — one row per session per employee, with per-employee totals
+  /// and a blank separator row between employees.
   ///
-  /// Columns: Employee Name, Date, Clock In, Clock Out, Total Hours, Status
-  static String generateCsv(List<AttendanceRecord> records) {
+  /// Columns: Employee Name, Session, Clock-In, Clock-Out, Hours, Status
+  ///
+  /// Absent employees (no records in [records]) get a single "Absent" row.
+  static String generateDetailedCsv(
+    List<Employee> allEmployees,
+    List<AttendanceRecord> records,
+  ) {
     final rows = <List<dynamic>>[
-      ['Employee Name', 'Date', 'Clock In', 'Clock Out', 'Total Hours', 'Status'],
-      for (final r in records)
-        [
-          r.employeeName,
-          r.dateKey,
-          _fmt(r.clockInTime),
-          r.clockOutTime != null ? _fmt(r.clockOutTime!) : '',
-          r.totalHours?.toStringAsFixed(2) ?? '',
-          r.status.displayLabel,
-        ],
+      ['Employee Name', 'Session', 'Clock-In', 'Clock-Out', 'Hours', 'Status'],
     ];
+
+    // Group records by employee.
+    final byEmployee = <String, List<AttendanceRecord>>{};
+    for (final r in records) {
+      (byEmployee[r.employeeId] ??= []).add(r);
+    }
+
+    for (final emp in allEmployees) {
+      final sessions = byEmployee[emp.id] ?? [];
+
+      if (sessions.isEmpty) {
+        rows.add([emp.name, '', '', '', '', 'Absent']);
+      } else {
+        sessions.sort((a, b) => a.clockInTime.compareTo(b.clockInTime));
+
+        double totalHours = 0;
+        bool hasMissing = false;
+
+        for (int i = 0; i < sessions.length; i++) {
+          final s = sessions[i];
+          final String hoursStr;
+          final String status;
+
+          if (s.clockOutTime == null) {
+            hasMissing = true;
+            hoursStr = '';
+            status = '⚠ Missing Clock-Out';
+          } else {
+            hoursStr = s.totalHours?.toStringAsFixed(2) ?? '';
+            totalHours += s.totalHours ?? 0;
+            status = 'Complete';
+          }
+
+          rows.add([
+            emp.name,
+            'Session ${i + 1}',
+            _fmt(s.clockInTime),
+            s.clockOutTime != null ? _fmt(s.clockOutTime!) : '',
+            hoursStr,
+            status,
+          ]);
+        }
+
+        // Summary row for this employee.
+        rows.add([
+          '${emp.name} Total',
+          '',
+          '',
+          '',
+          hasMissing ? '' : totalHours.toStringAsFixed(2),
+          '',
+        ]);
+      }
+
+      // Blank separator between employees.
+      rows.add(['', '', '', '', '', '']);
+    }
+
+    return const ListToCsvConverter().convert(rows);
+  }
+
+  /// Summary CSV — one row per employee, total hours across all sessions.
+  ///
+  /// Columns: Employee Name, Total Hours, Status
+  ///
+  /// If any session has a missing clock-out, Total Hours is blank and
+  /// Status is "⚠ Missing Clock-Out". Absent employees get a single row
+  /// with status "Absent".
+  static String generateSummaryCsv(
+    List<Employee> allEmployees,
+    List<AttendanceRecord> records,
+  ) {
+    final rows = <List<dynamic>>[
+      ['Employee Name', 'Total Hours', 'Status'],
+    ];
+
+    final byEmployee = <String, List<AttendanceRecord>>{};
+    for (final r in records) {
+      (byEmployee[r.employeeId] ??= []).add(r);
+    }
+
+    for (final emp in allEmployees) {
+      final sessions = byEmployee[emp.id] ?? [];
+
+      if (sessions.isEmpty) {
+        rows.add([emp.name, '', 'Absent']);
+      } else if (sessions.any((s) => s.clockOutTime == null)) {
+        rows.add([emp.name, '', '⚠ Missing Clock-Out']);
+      } else {
+        final total = sessions.fold(0.0, (sum, s) => sum + (s.totalHours ?? 0));
+        rows.add([emp.name, total.toStringAsFixed(2), 'Complete']);
+      }
+    }
+
     return const ListToCsvConverter().convert(rows);
   }
 

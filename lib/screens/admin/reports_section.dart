@@ -20,7 +20,8 @@ class ReportsSection extends ConsumerStatefulWidget {
 class _ReportsSectionState extends ConsumerState<ReportsSection> {
   late DateTime _from;
   late DateTime _to;
-  String? _csvData;
+  String? _detailedCsv;
+  String? _summaryCsv;
   bool _isGenerating = false;
   bool _isSending = false;
 
@@ -36,16 +37,19 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
   Future<void> _generateReport() async {
     setState(() {
       _isGenerating = true;
-      _csvData = null;
+      _detailedCsv = null;
+      _summaryCsv = null;
     });
     try {
-      final records = await ref
-          .read(adminServiceProvider)
-          .getAttendanceForDateRange(_from, _to);
-      final csv = AdminService.generateCsv(records);
+      final svc = ref.read(adminServiceProvider);
+      final records = await svc.getAttendanceForDateRange(_from, _to);
+      final employees = await svc.getAllEmployees();
+      final detailed = AdminService.generateDetailedCsv(employees, records);
+      final summary = AdminService.generateSummaryCsv(employees, records);
       if (mounted) {
         setState(() {
-          _csvData = csv;
+          _detailedCsv = detailed;
+          _summaryCsv = summary;
           _isGenerating = false;
         });
       }
@@ -60,31 +64,27 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
   }
 
   Future<void> _copyToClipboard() async {
-    if (_csvData == null) return;
-    await Clipboard.setData(ClipboardData(text: _csvData!));
+    if (_detailedCsv == null) return;
+    await Clipboard.setData(ClipboardData(text: _detailedCsv!));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('CSV copied to clipboard'),
+        content: Text('Detailed CSV copied to clipboard'),
         duration: Duration(seconds: 2),
       ),
     );
   }
 
-  /// Primary send action.
-  ///
-  /// When SendGrid is configured ([EmailConfig.isConfigured]) the report is
-  /// sent directly via the API and a snackbar confirms the outcome.
-  /// Falls back to opening the device mail app when the API is not yet set up.
   Future<void> _sendReport() async {
-    if (_csvData == null) return;
+    if (_detailedCsv == null || _summaryCsv == null) return;
     setState(() => _isSending = true);
 
     if (EmailConfig.isConfigured) {
       final sent = await ref.read(emailServiceProvider).sendReport(
             from: _from,
             to: _to,
-            csv: _csvData!,
+            detailedCsv: _detailedCsv!,
+            summaryCsv: _summaryCsv!,
           );
       if (mounted) {
         setState(() => _isSending = false);
@@ -98,22 +98,21 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
         );
       }
     } else {
-      // SendGrid not configured — open device mail app with CSV in body.
       if (mounted) setState(() => _isSending = false);
       await _openMailApp();
     }
   }
 
-  /// Fallback: opens the device mail app with the CSV pre-filled in the body.
+  /// Fallback: opens the device mail app with the detailed CSV in the body.
   Future<void> _openMailApp() async {
-    if (_csvData == null) return;
+    if (_detailedCsv == null) return;
     final subject =
-        'Wellness on Wellington — Attendance ${adminFmtDate(_from)} to ${adminFmtDate(_to)}';
+        'Wellness on Wellington – Attendance ${adminFmtDate(_from)} to ${adminFmtDate(_to)}';
     final uri = Uri(
       scheme: 'mailto',
       queryParameters: {
         'subject': subject,
-        'body': _csvData!,
+        'body': _detailedCsv!,
       },
     );
     if (!await launchUrl(uri)) {
@@ -127,6 +126,7 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final hasReport = _detailedCsv != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -137,11 +137,13 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
             to: _to,
             onFromChanged: (d) => setState(() {
               _from = d;
-              _csvData = null;
+              _detailedCsv = null;
+              _summaryCsv = null;
             }),
             onToChanged: (d) => setState(() {
               _to = d;
-              _csvData = null;
+              _detailedCsv = null;
+              _summaryCsv = null;
             }),
           ),
         ),
@@ -174,7 +176,7 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
                 style:
                     FilledButton.styleFrom(backgroundColor: adminCrimson),
               ),
-              if (_csvData != null) ...[
+              if (hasReport) ...[
                 const SizedBox(width: 12),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.copy_outlined, size: 16),
@@ -233,7 +235,7 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_csvData == null) {
+    if (_detailedCsv == null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -264,7 +266,7 @@ class _ReportsSectionState extends ConsumerState<ReportsSection> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: SelectableText(
-            _csvData!,
+            _detailedCsv!,
             style: GoogleFonts.robotoMono(
               fontSize: 12,
               color: adminCharcoal,

@@ -2,23 +2,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database/database_helper.dart';
 import '../models/models.dart';
+import '../services/board_reset_service.dart';
 
-/// Three-bucket grouping of employees for today's attendance board.
+/// Two-bucket grouping of employees for today's attendance board.
+///
+/// An employee can have multiple clock-in/clock-out sessions per day.
+/// They appear in [clockedIn] if they have an open session (no clock-out yet),
+/// and in [notClockedIn] otherwise — regardless of how many prior sessions they
+/// have already completed.
 class AttendanceBoardState {
   const AttendanceBoardState({
     required this.notClockedIn,
     required this.clockedIn,
-    required this.completed,
+    required this.lastClockOutTimes,
   });
 
-  /// Employees with no attendance record today.
+  /// Employees with no currently-open session (either never clocked in today,
+  /// or all their sessions have been clocked out).
   final List<Employee> notClockedIn;
 
-  /// Employees currently clocked in (record exists, no clock-out time).
+  /// Open sessions — one per employee who is currently clocked in.
   final List<AttendanceRecord> clockedIn;
 
-  /// Employees who have completed their shift today.
-  final List<AttendanceRecord> completed;
+  /// Most recent clock-out time today for each employee in [notClockedIn]
+  /// who has at least one completed session since the last board reset.
+  /// Keyed by employee ID. Employees with no completed sessions (or whose
+  /// sessions were all before the reset) have no entry here.
+  final Map<String, DateTime> lastClockOutTimes;
 }
 
 // ── Raw data providers ────────────────────────────────────────────────────────
@@ -35,18 +45,30 @@ final todayAttendanceProvider = FutureProvider<List<AttendanceRecord>>((ref) {
   return DatabaseHelper.instance.getAttendanceForDate(DateTime.now());
 });
 
+/// The [DateTime] of the last successful board reset (email sent), or null.
+/// Invalidate after a successful email send to trigger a board refresh.
+final boardResetProvider = FutureProvider<DateTime?>((ref) {
+  return BoardResetService.lastResetTime();
+});
+
 // ── Computed board state ──────────────────────────────────────────────────────
 
-/// Combines [employeesProvider] and [todayAttendanceProvider] into a
-/// ready-to-render [AttendanceBoardState].
+/// Combines [employeesProvider], [todayAttendanceProvider], and
+/// [boardResetProvider] into a ready-to-render [AttendanceBoardState].
 ///
-/// Returns [AsyncValue.loading] while either upstream provider is loading.
+/// Returns [AsyncValue.loading] while any upstream provider is loading.
+///
+/// Sessions that started before today's board reset cutoff are treated as
+/// archived and excluded from the active board (they remain in SQLite).
 final attendanceBoardProvider =
     Provider<AsyncValue<AttendanceBoardState>>((ref) {
   final employeesAsync = ref.watch(employeesProvider);
   final attendanceAsync = ref.watch(todayAttendanceProvider);
+  final resetAsync = ref.watch(boardResetProvider);
 
-  if (employeesAsync.isLoading || attendanceAsync.isLoading) {
+  if (employeesAsync.isLoading ||
+      attendanceAsync.isLoading ||
+      resetAsync.isLoading) {
     return const AsyncValue.loading();
   }
 
@@ -65,29 +87,58 @@ final attendanceBoardProvider =
   }
 
   final employees = employeesAsync.requireValue;
-  final records = attendanceAsync.requireValue;
+  final allRecords = attendanceAsync.requireValue;
+  final resetTime = resetAsync.requireValue; // DateTime? — null if never reset
 
-  // Build a lookup: employeeId → today's record.
-  final recordMap = {for (final r in records) r.employeeId: r};
+  // Determine the cutoff: only apply the reset if it happened today.
+  final now = DateTime.now();
+  final todayMidnight = DateTime(now.year, now.month, now.day);
+  final resetCutoff = (resetTime != null && resetTime.isAfter(todayMidnight))
+      ? resetTime
+      : null;
+
+  // Active records are those that started after the reset cutoff (or all
+  // records if no reset has happened today).
+  final records = resetCutoff != null
+      ? allRecords
+          .where((r) => r.clockInTime.isAfter(resetCutoff))
+          .toList()
+      : allRecords;
+
+  // Build a lookup: employeeId → open session (clockOutTime == null).
+  final openSessions = <String, AttendanceRecord>{};
+  for (final r in records) {
+    if (r.clockOutTime == null) {
+      openSessions[r.employeeId] = r;
+    }
+  }
+
+  // Build a lookup: employeeId → most recent clock-out from closed sessions.
+  final lastClockOut = <String, DateTime>{};
+  for (final r in records) {
+    if (r.clockOutTime != null) {
+      final existing = lastClockOut[r.employeeId];
+      if (existing == null || r.clockOutTime!.isAfter(existing)) {
+        lastClockOut[r.employeeId] = r.clockOutTime!;
+      }
+    }
+  }
 
   final notClockedIn = <Employee>[];
   final clockedIn = <AttendanceRecord>[];
-  final completed = <AttendanceRecord>[];
 
   for (final emp in employees) {
-    final record = recordMap[emp.id];
-    if (record == null) {
-      notClockedIn.add(emp);
-    } else if (record.clockOutTime == null) {
-      clockedIn.add(record);
+    final openSession = openSessions[emp.id];
+    if (openSession != null) {
+      clockedIn.add(openSession);
     } else {
-      completed.add(record);
+      notClockedIn.add(emp);
     }
   }
 
   return AsyncValue.data(AttendanceBoardState(
     notClockedIn: notClockedIn,
     clockedIn: clockedIn,
-    completed: completed,
+    lastClockOutTimes: lastClockOut,
   ));
 });

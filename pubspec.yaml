@@ -62,6 +62,8 @@ dev_dependencies:
   build_runner: ^2.4.14
   # Windows MSIX installer packaging
   msix: ^3.16.8
+  # App icon generation for Android and Windows
+  flutter_launcher_icons: ^0.14.3
 
 # ── Windows MSIX packaging ────────────────────────────────────────────────────
 # Run on a Windows machine: dart run msix:create
@@ -92,9 +94,19 @@ msix_config:
   # Targeting internal sideload, not the Microsoft Store.
   store: false
 
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/app_icon.jpg"
+  windows:
+    generate: true
+    image_path: "assets/app_icon.jpg"
+    icon_size: 48
+
 flutter:
   uses-material-design: true
 
   assets:
-    - wellness_on_wellington_logo.jpg
+    - assets/main_page_logo.jpg
+    - assets/app_icon.jpg
     - .env

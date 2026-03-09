@@ -202,6 +202,23 @@ class DatabaseHelper {
     return rows.isEmpty ? null : AttendanceRecord.fromMap(rows.first);
   }
 
+  /// The open (not yet clocked-out) session for one employee on a specific date,
+  /// or null if no open session exists. An employee can have multiple sessions
+  /// per day; this returns only the one with clock_out_time IS NULL.
+  Future<AttendanceRecord?> getOpenSessionForEmployee(
+    String employeeId,
+    DateTime date,
+  ) async {
+    final db = await database;
+    final rows = await db.query(
+      tableAttendanceRecords,
+      where: 'employee_id = ? AND date = ? AND clock_out_time IS NULL',
+      whereArgs: [employeeId, _dateKey(date)],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : AttendanceRecord.fromMap(rows.first);
+  }
+
   Future<void> updateAttendanceRecord(AttendanceRecord record) async {
     final db = await database;
     await db.update(
