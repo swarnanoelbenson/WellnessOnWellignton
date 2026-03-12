@@ -1,7 +1,15 @@
 {\rtf1\ansi\ansicpg1252\cocoartf2868
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Menlo-Regular;}
-{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
-{\*\expandedcolortbl;;\csgray\c0;}
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Menlo-Regular;\f2\fnil\fcharset0 HelveticaNeue-Bold;
+\f3\fnil\fcharset0 HelveticaNeue;\f4\fmodern\fcharset0 Courier;\f5\fmodern\fcharset0 Courier-Bold;
+}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red193\green193\blue193;\red19\green19\blue19;
+\red63\green151\blue251;\red197\green197\blue197;\red46\green46\blue46;\red109\green109\blue109;}
+{\*\expandedcolortbl;;\csgray\c0;\cssrgb\c80000\c80000\c80000;\cssrgb\c9412\c9412\c9412;
+\cssrgb\c30196\c66667\c98824;\cssrgb\c81569\c81569\c81569;\cssrgb\c23529\c23529\c23529;\cssrgb\c50196\c50196\c50196;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid1\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{circle\}}{\leveltext\leveltemplateid2\'01\uc0\u9702 ;}{\levelnumbers;}\fi-360\li1440\lin1440 }{\listname ;}\listid1}
+{\list\listtemplateid2\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid101\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid2}
+{\list\listtemplateid3\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid201\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid3}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}{\listoverride\listid3\listoverridecount0\ls3}}
 \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
@@ -19,8 +27,170 @@ PHASE 1: COMPLETE\
 PHASE 2: COMPLETE\
 PHASE 3: COMPLETE (Found bugs and fixed them for complete functionality)\
 PHASE 4: \
-PHASE 5: 
-\f0\fs24 \cf0 \CocoaLigature1 \
+PHASE 5: \
+\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f2\b\fs36 \cf3 \cb4 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \outl0\strokewidth0 \strokec3 Windows Release \'97 Step-by-Step\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\fs28 \cf3 1. Prerequisites (install once)\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls1\ilvl0
+\fs26 \cf3 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Flutter for Windows
+\f3\b0 \'a0\'97\'a0{\field{\*\fldinst{HYPERLINK "https://docs.flutter.dev/get-started/install/windows"}}{\fldrslt \cf5 \ul \ulc5 \strokec5 flutter.dev/docs/get-started/install/windows}}\cb1 \
+\pard\tx940\tx1440\pardeftab720\li1440\fi-1440\partightenfactor0
+\ls1\ilvl1\cf3 \cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u9702 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Enable Windows desktop:\'a0
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 flutter config --enable-windows-desktop
+\f3\fs26 \cf3 \cb1 \strokec3 \
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls1\ilvl0
+\f2\b \cf3 \cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Visual Studio 2022
+\f3\b0 \'a0(Community is free) with the\'a0
+\f2\b "Desktop development with C++"
+\f3\b0 \'a0workload\cb1 \
+\ls1\ilvl0
+\f2\b \cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Inno Setup 6
+\f3\b0 \'a0\'97\'a0{\field{\*\fldinst{HYPERLINK "https://jrsoftware.org/isdl.php"}}{\fldrslt \cf5 \ul \ulc5 \strokec5 jrsoftware.org/isdl.php}}\cb1 \
+\pard\tx940\tx1440\pardeftab720\li1440\fi-1440\partightenfactor0
+\ls1\ilvl1\cf3 \cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u9702 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 During install, tick\'a0
+\f2\b "Install Inno Setup Preprocessor"
+\f3\b0 \cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf8 \cb4 \strokec8 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f2\b\fs28 \cf3 \strokec3 2. Copy the project to Windows\
+\pard\pardeftab720\sa51\partightenfactor0
+
+\f3\b0\fs26 \cf3 Transfer the entire project folder to the Windows machine (USB, network share, or Git clone). Make sure the 
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 .env
+\f3\fs26 \cf3 \cb4 \strokec3  file is included \'97 it is git-ignored, so if you clone from Git you must copy it manually.\
+\pard\pardeftab720\partightenfactor0
+\cf8 \strokec8 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f2\b\fs28 \cf3 \strokec3 3. Build the Windows release\
+\pard\pardeftab720\sa51\partightenfactor0
+
+\f3\b0\fs26 \cf3 Open 
+\f2\b PowerShell
+\f3\b0  or 
+\f2\b Command Prompt
+\f3\b0  in the project root and run:\
+\pard\pardeftab720\qc\partightenfactor0
+\cf3 \cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 flutter pub get\
+flutter build windows --release\
+\pard\pardeftab720\sa51\partightenfactor0
+
+\f3\fs26 \cf3 \cb4 \strokec3 Output lands at:\
+\pard\pardeftab720\qc\partightenfactor0
+\cf3 \cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 build\\windows\\x64\\runner\\Release\\\
+\pard\pardeftab720\partightenfactor0
+
+\f3\fs26 \cf8 \cb4 \strokec8 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f2\b\fs28 \cf3 \strokec3 4. Copy\'a0
+\f5\fs27\fsmilli13689 \cf6 \cb7 \strokec6 .env
+\f2\fs28 \cf3 \cb4 \strokec3 \'a0into the Release folder\
+\pard\pardeftab720\sa51\partightenfactor0
+
+\f3\b0\fs26 \cf3 Flutter does 
+\f2\b not
+\f3\b0  auto-copy asset files for Windows desktop builds. You must do this manually:\
+\pard\pardeftab720\qc\partightenfactor0
+\cf3 \cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 copy .env build\\windows\\x64\\runner\\Release\\.env\
+\pard\pardeftab720\partightenfactor0
+
+\f3\fs26 \cf8 \cb4 \strokec8 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f2\b\fs28 \cf3 \strokec3 5. Compile the installer\
+\pard\pardeftab720\qc\partightenfactor0
+
+\f3\b0\fs26 \cf3 \cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 iscc installer\\WellnessOnWellington_Setup.iss\
+\pard\pardeftab720\sa51\partightenfactor0
+
+\f3\fs26 \cf3 \cb4 \strokec3 Or open the file in the 
+\f2\b Inno Setup Compiler IDE
+\f3\b0  and press 
+\f2\b Ctrl+F9
+\f3\b0 .\
+The finished installer will be at:\
+\pard\pardeftab720\qc\partightenfactor0
+\cf3 \cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 installer\\Output\\WellnessOnWellington_Setup.exe\
+\pard\pardeftab720\partightenfactor0
+
+\f3\fs26 \cf8 \cb4 \strokec8 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f2\b\fs28 \cf3 \strokec3 6. Install on the clinic PC\
+\pard\pardeftab720\sa51\partightenfactor0
+
+\f3\b0\fs26 \cf3 Run 
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 WellnessOnWellington_Setup.exe
+\f3\fs26 \cf3 \cb4 \strokec3  \'97 it will:\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls2\ilvl0\cf3 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Install to\'a0
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 C:\\Program Files\\Wellness on Wellington\\
+\f3\fs26 \cf3 \cb1 \strokec3 \
+\ls2\ilvl0\cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Create a Start Menu entry\cb1 \
+\ls2\ilvl0\cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Offer an optional desktop shortcut (unticked by default)\cb1 \
+\ls2\ilvl0\cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 Offer to launch the app immediately after install\cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf8 \cb4 \strokec8 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f2\b\fs28 \cf3 \strokec3 Notes\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls3\ilvl0
+\f3\b0\fs26 \cf3 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 The\'a0
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 .env
+\f3\fs26 \cf3 \cb4 \strokec3 \'a0file contains the Gmail credentials. The installer bundles it into\'a0
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 Program Files
+\f3\fs26 \cf3 \cb4 \strokec3 \'a0alongside the\'a0
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 .exe
+\f3\fs26 \cf3 \cb4 \strokec3 . If you ever rotate the Gmail app password, just replace\'a0
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 .env
+\f3\fs26 \cf3 \cb4 \strokec3 \'a0in the install directory and restart the app \'97 no reinstall needed.\cb1 \
+\ls3\ilvl0\cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 The SQLite database is written to the same\'a0
+\f4\fs23\fsmilli11700 \cf6 \cb7 \strokec6 Program Files
+\f3\fs26 \cf3 \cb4 \strokec3 \'a0folder. The installer requests admin privileges so the app has write access there.\cb1 \
+\ls3\ilvl0\cb4 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 To uninstall cleanly, use\'a0
+\f2\b Add or Remove Programs
+\f3\b0 \'a0\'97 it removes the database too.\cb1 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 \cf0 \
 }
